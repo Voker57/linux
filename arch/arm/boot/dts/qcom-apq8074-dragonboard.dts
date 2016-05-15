@@ -30,6 +30,7 @@
 		sdhci@f98a4900 {
 			cd-gpios = <&msmgpio 62 0x1>;
 			bus-width = <4>;
+			status = "ok";
 		};
 
 
