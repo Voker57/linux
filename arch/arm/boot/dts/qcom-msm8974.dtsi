@@ -297,6 +297,16 @@
 				<56 512 3936000 393600>;
 	};
 
+	cryptobam: cryptobam@fd444000 {
+		compatible = "qcom,bam-v1.4.0";
+		reg = <0xfd444000 0x1b000>;
+		interrupts = <0 268 0>;
+		clocks = <&gcc GCC_BAM_DMA_AHB_CLK>;
+		clock-names = "bam_clk";
+		#dma-cells = <2 3>;
+		qcom,ee = <0>;
+	};
+	
         qcom,qcrypto@fd440000 {
 		compatible = "qcom,qcrypto";
 		reg = <0xfd440000 0x20000>,
@@ -306,8 +316,15 @@
 		qcom,bam-pipe-pair = <2>;
 		qcom,ce-hw-instance = <1>;
 		qcom,ce-device = <0>;
+		clocks = <&gcc GCC_CE2_AHB_CLK>,
+		 <&gcc GCC_CE2_AXI_CLK>,
+			 <&gcc GCC_CE2_CLK>;
+	  dmas = <&cryptobam 2>, <&cryptobam 3>;
+		dma-names = "rx", "tx";
+		clock-names = "iface", "bus", "core";
 		qcom,clk-mgmt-sus-res;
                 qcom,msm-bus,name = "qcrypto-noc";
+
 		qcom,msm-bus,num-cases = <2>;
 		qcom,msm-bus,num-paths = <1>;
                 qcom,use-sw-aes-cbc-ecb-ctr-algo;
@@ -318,26 +335,6 @@
 				<56 512 3936000 393600>;
 	};
 
-        qcom,qcrypto1@fd440000 {
-		compatible = "qcom,qcrypto";
-		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
-		reg-names = "crypto-base","crypto-bam-base";
-		interrupts = <0 236 0>;
-		qcom,bam-pipe-pair = <0>;
-		qcom,ce-hw-instance = <1>;
-		qcom,ce-device = <1>;
-		qcom,clk-mgmt-sus-res;
-                qcom,msm-bus,name = "qcrypto-noc";
-		qcom,msm-bus,num-cases = <2>;
-		qcom,msm-bus,num-paths = <1>;
-		qcom,use-sw-aes-cbc-ecb-ctr-algo;
-		qcom,use-sw-aes-xts-algo;
-		qcom,use-sw-ahash-algo;
-		qcom,msm-bus,vectors-KBps =
-				<56 512 0 0>,
-				<56 512 3936000 393600>;
-	};
 	
 		timer@f9020000 {
 			#address-cells = <1>;
