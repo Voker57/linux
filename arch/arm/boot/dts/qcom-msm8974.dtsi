@@ -303,15 +303,14 @@
 		interrupts = <0 268 0>;
 		clocks = <&gcc GCC_BAM_DMA_AHB_CLK>;
 		clock-names = "bam_clk";
-		#dma-cells = <2 3>;
+		#dma-cells = <1>;
 		qcom,ee = <0>;
 	};
 	
         qcom,qcrypto@fd440000 {
 		compatible = "qcom,qcrypto";
-		reg = <0xfd440000 0x20000>,
-		      <0xfd444000 0x1b000>;
-		reg-names = "crypto-base","crypto-bam-base";
+		reg = <0xfd440000 0x4000>;
+		reg-names = "crypto-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <2>;
 		qcom,ce-hw-instance = <1>;
