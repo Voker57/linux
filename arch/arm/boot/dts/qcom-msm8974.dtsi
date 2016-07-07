@@ -281,13 +281,15 @@
 		
 	cryptobam: dma@fd444000 {
 		compatible = "qcom,bam-v1.4.0";
-		reg = <0xfd444000 0x1b000>;
-		interrupts = <0 268 0>;
-		clocks = <&gcc GCC_CE2_AHB_CLK>;
-		clock-names = "bam_clk";
-		qcom,controlled-remotely;
+		reg = <0xfd444000 0x15000>;
+		interrupts = <0 236 0>;
+		clocks = <&gcc GCC_CE2_AHB_CLK>,
+                                <&gcc GCC_CE2_AXI_CLK>,
+                                <&gcc GCC_CE2_CLK>;
+                        clock-names = "bam_clk", "axi_clk", "core_clk";
 		#dma-cells = <1>;
 		qcom,ee = <1>;
+		qcom,controlled-remotely;
 	};
 	
         qcom,qcrypto@fd440000 {
