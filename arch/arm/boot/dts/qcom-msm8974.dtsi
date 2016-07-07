@@ -294,7 +294,7 @@
 	
         qcom,qcrypto@fd440000 {
 		compatible = "qcom,crypto-v5.1";
-		reg = <0xfd440000 0x4000>;
+		reg = <0xfd45a000 0x6000>;
 		reg-names = "crypto-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <2>;
