@@ -293,19 +293,20 @@
 	};
 	
         qcom,qcrypto@fd440000 {
-		compatible = "qcom,qcrypto";
+		compatible = "qcom,crypto-v5.1";
 		reg = <0xfd440000 0x4000>;
 		reg-names = "crypto-base";
 		interrupts = <0 236 0>;
 		qcom,bam-pipe-pair = <2>;
 		qcom,ce-hw-instance = <1>;
 		qcom,ce-device = <0>;
-		clocks = <&gcc GCC_CE2_AHB_CLK>,
+		clocks = <&gcc GCC_CE2_CLK>,
+		<&gcc GCC_CE2_AHB_CLK>,
 		 <&gcc GCC_CE2_AXI_CLK>,
-			 <&gcc GCC_CE2_CLK>;
+		 <&gcc CE2_CLK_SRC>;
 	  dmas = <&cryptobam 2>, <&cryptobam 3>;
 		dma-names = "rx", "tx";
-		clock-names = "iface", "bus", "core";
+		clock-names = "core", "iface", "bus", "core_src";
 		qcom,clk-mgmt-sus-res;
                 qcom,msm-bus,name = "qcrypto-noc";
 
