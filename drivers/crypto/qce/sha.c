@@ -242,6 +242,7 @@ static int qce_ahash_update(struct ahash_request *req)
 	unsigned int hash_later;
 	unsigned int nbytes;
 	unsigned int blocksize;
+	int ret;
 
 	blocksize = crypto_tfm_alg_blocksize(crypto_ahash_tfm(tfm));
 	rctx->count += req->nbytes;
@@ -302,7 +303,12 @@ static int qce_ahash_update(struct ahash_request *req)
 	req->nbytes = nbytes;
 	rctx->buflen = hash_later;
 
-	return qce->async_req_enqueue(tmpl->qce, &req->base);
+	ret = qce->async_req_enqueue(tmpl->qce, &req->base);
+	
+	if (ret == -EINPROGRESS)
+		return 0;
+	else
+		return ret;
 }
 
 static int qce_ahash_final(struct ahash_request *req)
@@ -310,7 +316,8 @@ static int qce_ahash_final(struct ahash_request *req)
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(req->base.tfm);
 	struct qce_device *qce = tmpl->qce;
-
+	int ret;
+	
 	if (!rctx->buflen)
 		return 0;
 
@@ -325,7 +332,12 @@ static int qce_ahash_final(struct ahash_request *req)
 	req->src = rctx->sg;
 	req->nbytes = rctx->buflen;
 
-	return qce->async_req_enqueue(tmpl->qce, &req->base);
+	ret = qce->async_req_enqueue(tmpl->qce, &req->base);
+	
+	if (ret == -EINPROGRESS)
+		return 0;
+	else
+		return ret;
 }
 
 static int qce_ahash_digest(struct ahash_request *req)
@@ -344,7 +356,12 @@ static int qce_ahash_digest(struct ahash_request *req)
 	rctx->first_blk = true;
 	rctx->last_blk = true;
 
-	return qce->async_req_enqueue(tmpl->qce, &req->base);
+	ret = qce->async_req_enqueue(tmpl->qce, &req->base);
+	
+	if (ret == -EINPROGRESS)
+		return 0;
+	else
+		return ret;
 }
 
 struct qce_ahash_result {
