@@ -36,21 +36,32 @@ static const u32 std_iv_sha256[SHA256_DIGEST_SIZE / sizeof(u32)] = {
 
 static void qce_ahash_done(void *data)
 {
+	pr_err("%s() called\n", __func__);
 	struct crypto_async_request *async_req = data;
+	pr_err("...\n");
 	struct ahash_request *req = ahash_request_cast(async_req);
+		pr_err("...\n");
 	struct crypto_ahash *ahash = crypto_ahash_reqtfm(req);
+		pr_err("...\n");
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
+		pr_err("...%p\n", async_req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(async_req->tfm);
+		pr_err("...\n");
 	struct qce_device *qce = tmpl->qce;
+		pr_err("...\n");
 	struct qce_result_dump *result = qce->dma.result_buf;
+		pr_err("...\n");
 	unsigned int digestsize = crypto_ahash_digestsize(ahash);
+		pr_err("...\n");
 	int error;
 	u32 status;
 
+		pr_err("...\n");
 	error = qce_dma_terminate_all(&qce->dma);
 	if (error)
 		dev_dbg(qce->dev, "ahash dma termination error (%d)\n", error);
 
+		pr_err("....%p\n", req->src);
 	dma_unmap_sg(qce->dev, req->src, rctx->src_nents, DMA_TO_DEVICE);
 	dma_unmap_sg(qce->dev, &rctx->result_sg, 1, DMA_FROM_DEVICE);
 
@@ -75,6 +86,7 @@ static void qce_ahash_done(void *data)
 
 static int qce_ahash_async_req_handle(struct crypto_async_request *async_req)
 {
+	pr_err("%s() called\n", __func__);
 	struct ahash_request *req = ahash_request_cast(async_req);
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_sha_ctx *ctx = crypto_tfm_ctx(async_req->tfm);
@@ -107,6 +119,7 @@ static int qce_ahash_async_req_handle(struct crypto_async_request *async_req)
 	if (ret < 0)
 		goto error_unmap_src;
 
+	pr_err("Priming sgs with ahash_done...\n")
 	ret = qce_dma_prep_sgs(&qce->dma, req->src, rctx->src_nents,
 			       &rctx->result_sg, 1, qce_ahash_done, async_req);
 	if (ret)
@@ -117,7 +130,7 @@ static int qce_ahash_async_req_handle(struct crypto_async_request *async_req)
 	ret = qce_start(async_req, tmpl->crypto_alg_type, 0, 0);
 	if (ret)
 		goto error_terminate;
-
+	pr_err("qce_start ok\n");
 	return 0;
 
 error_terminate:
@@ -131,10 +144,13 @@ error_unmap_src:
 
 static int qce_ahash_init(struct ahash_request *req)
 {
+
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(req->base.tfm);
 	const u32 *std_iv = tmpl->std_iv;
 
+	
+	
 	memset(rctx, 0, sizeof(*rctx));
 	rctx->first_blk = true;
 	rctx->last_blk = false;
@@ -146,6 +162,7 @@ static int qce_ahash_init(struct ahash_request *req)
 
 static int qce_ahash_export(struct ahash_request *req, void *out)
 {
+	pr_err("%s() called\n", __func__);
 	struct crypto_ahash *ahash = crypto_ahash_reqtfm(req);
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	unsigned long flags = rctx->flags;
@@ -177,6 +194,7 @@ static int qce_ahash_export(struct ahash_request *req, void *out)
 static int qce_import_common(struct ahash_request *req, u64 in_count,
 			     const u32 *state, const u8 *buffer, bool hmac)
 {
+	pr_err("%s() called\n", __func__);
 	struct crypto_ahash *ahash = crypto_ahash_reqtfm(req);
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	unsigned int digestsize = crypto_ahash_digestsize(ahash);
@@ -211,6 +229,7 @@ static int qce_import_common(struct ahash_request *req, u64 in_count,
 
 static int qce_ahash_import(struct ahash_request *req, const void *in)
 {
+	pr_err("%s() called\n", __func__);
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	unsigned long flags = rctx->flags;
 	bool hmac = IS_SHA_HMAC(flags);
@@ -233,6 +252,7 @@ static int qce_ahash_import(struct ahash_request *req, const void *in)
 
 static int qce_ahash_update(struct ahash_request *req)
 {
+	pr_err("%s() called\n", __func__);
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(req->base.tfm);
@@ -305,14 +325,15 @@ static int qce_ahash_update(struct ahash_request *req)
 
 	ret = qce->async_req_enqueue(tmpl->qce, &req->base);
 	
-	if (ret == -EINPROGRESS)
-		return 0;
-	else
+// 	if (ret == -EINPROGRESS)
+// 		return 0;
+// 	else
 		return ret;
 }
 
 static int qce_ahash_final(struct ahash_request *req)
 {
+	pr_err("%s() called\n", __func__);
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(req->base.tfm);
 	struct qce_device *qce = tmpl->qce;
@@ -334,14 +355,15 @@ static int qce_ahash_final(struct ahash_request *req)
 
 	ret = qce->async_req_enqueue(tmpl->qce, &req->base);
 	
-	if (ret == -EINPROGRESS)
-		return 0;
-	else
+// 	if (ret == -EINPROGRESS)
+// 		return 0;
+// 	else
 		return ret;
 }
 
 static int qce_ahash_digest(struct ahash_request *req)
 {
+	pr_err("%s() called\n", __func__);
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(req->base.tfm);
 	struct qce_device *qce = tmpl->qce;
@@ -371,6 +393,7 @@ struct qce_ahash_result {
 
 static void qce_digest_complete(struct crypto_async_request *req, int error)
 {
+	pr_err("%s() called\n", __func__);
 	struct qce_ahash_result *result = req->data;
 
 	if (error == -EINPROGRESS)
@@ -455,6 +478,7 @@ err_free_ahash:
 
 static int qce_ahash_cra_init(struct crypto_tfm *tfm)
 {
+	pr_err("%s() called\n", __func__);
 	struct crypto_ahash *ahash = __crypto_ahash_cast(tfm);
 	struct qce_sha_ctx *ctx = crypto_tfm_ctx(tfm);
 
@@ -571,6 +595,7 @@ static int qce_ahash_register_one(const struct qce_ahash_def *def,
 
 static void qce_ahash_unregister(struct qce_device *qce)
 {
+	pr_err("%s() called\n", __func__);
 	struct qce_alg_template *tmpl, *n;
 
 	list_for_each_entry_safe(tmpl, n, &ahash_algs, entry) {
@@ -582,6 +607,7 @@ static void qce_ahash_unregister(struct qce_device *qce)
 
 static int qce_ahash_register(struct qce_device *qce)
 {
+	pr_err("%s() called\n", __func__);
 	int ret, i;
 
 	for (i = 0; i < ARRAY_SIZE(ahash_def); i++) {
