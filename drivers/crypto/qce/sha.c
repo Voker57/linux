@@ -253,24 +253,25 @@ static int qce_ahash_import(struct ahash_request *req, const void *in)
 
 static int qce_ahash_update(struct ahash_request *req)
 {
-	pr_err("%s() called\n", __func__);
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(req->base.tfm);
 	struct qce_device *qce = tmpl->qce;
 	struct scatterlist *sg_last, *sg;
 	unsigned int total, len;
+	unsigned int tmpbuflen = 0;
 	unsigned int hash_later;
 	unsigned int nbytes;
 	unsigned int blocksize;
 	int ret;
 
+
+	
 	blocksize = crypto_tfm_alg_blocksize(crypto_ahash_tfm(tfm));
 	rctx->count += req->nbytes;
 
 	/* check for buffer from previous updates and append it */
 	total = req->nbytes + rctx->buflen;
-
 	if (total <= blocksize) {
 		scatterwalk_map_and_copy(rctx->buf + rctx->buflen, req->src,
 					 0, req->nbytes, 0);
@@ -287,20 +288,30 @@ static int qce_ahash_update(struct ahash_request *req)
 	 * data will be combined with current request bytes.
 	 */
 	if (rctx->buflen)
+	{
 		memcpy(rctx->tmpbuf, rctx->buf, rctx->buflen);
-
+		tmpbuflen = rctx->buflen;
+	}
+	
 	/* calculate how many bytes will be hashed later */
 	hash_later = total % blocksize;
-	if (hash_later) {
-		unsigned int src_offset = req->nbytes - hash_later;
-		scatterwalk_map_and_copy(rctx->buf, req->src, src_offset,
+	/* ensure we always have something on buffer */
+	if(hash_later == 0)
+		hash_later = blocksize;
+	unsigned int src_offset = req->nbytes - hash_later;
+	scatterwalk_map_and_copy(rctx->buf, req->src, src_offset,
 					 hash_later, 0);
-	}
-
+	rctx->buflen = hash_later;
+	
 	/* here nbytes is multiple of blocksize */
 	nbytes = total - hash_later;
 
-	len = rctx->buflen;
+	len = tmpbuflen;
+	
+		/* Zero-length update is a no-op */
+	if(nbytes == 0)
+		return 0;
+	
 	sg = sg_last = req->src;
 
 	while (len < nbytes && sg) {
@@ -314,22 +325,19 @@ static int qce_ahash_update(struct ahash_request *req)
 
 	sg_mark_end(sg_last);
 
-	if (rctx->buflen) {
+	if (tmpbuflen) {
 		sg_init_table(rctx->sg, 2);
-		sg_set_buf(rctx->sg, rctx->tmpbuf, rctx->buflen);
+		sg_set_buf(rctx->sg, rctx->tmpbuf, tmpbuflen);
 		sg_chain(rctx->sg, 2, req->src);
 		req->src = rctx->sg;
 	}
 
 	req->nbytes = nbytes;
-	rctx->buflen = hash_later;
+	
 
 	ret = qce->async_req_enqueue(tmpl->qce, &req->base);
 	
-// 	if (ret == -EINPROGRESS)
-// 		return 0;
-// 	else
-		return ret;
+	return ret;
 }
 
 static int qce_ahash_final(struct ahash_request *req)
@@ -340,8 +348,8 @@ static int qce_ahash_final(struct ahash_request *req)
 	struct qce_device *qce = tmpl->qce;
 	int ret;
 	
-	if (!rctx->buflen)
-		return 0;
+ 	if (!rctx->buflen)
+ 		return 0;
 
 	/* If hash is already been finalized, don't do anything */
 	if (rctx->finalized)
