@@ -87,7 +87,7 @@ static int qce_dma_prep_sg(struct dma_chan *chan, struct scatterlist *sg,
 	struct dma_async_tx_descriptor *desc;
 	dma_cookie_t cookie;
 
-	if (!sg || !nents)
+	if (!sg)
 		return -EINVAL;
 
 	desc = dmaengine_prep_slave_sg(chan, sg, nents, dir, flags);
