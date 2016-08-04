@@ -119,7 +119,6 @@ static int qce_ahash_async_req_handle(struct crypto_async_request *async_req)
 	if (ret < 0)
 		goto error_unmap_src;
 
-	pr_err("Priming sgs with ahash_done...\n")
 	ret = qce_dma_prep_sgs(&qce->dma, req->src, rctx->src_nents,
 			       &rctx->result_sg, 1, qce_ahash_done, async_req);
 	if (ret)
