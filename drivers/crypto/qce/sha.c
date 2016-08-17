@@ -92,6 +92,7 @@ static int qce_ahash_async_req_handle(struct crypto_async_request *async_req)
 	struct qce_sha_ctx *ctx = crypto_tfm_ctx(async_req->tfm);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(async_req->tfm);
 	struct qce_device *qce = tmpl->qce;
+	unsigned int digestsize = crypto_ahash_digestsize(crypto_ahash_reqtfm(req));
 	unsigned long flags = rctx->flags;
 	int ret;
 
@@ -103,6 +104,33 @@ static int qce_ahash_async_req_handle(struct crypto_async_request *async_req)
 		rctx->authklen = AES_KEYSIZE_128;
 	}
 
+	if (!req->nbytes)
+	/* Only way that can happen is if total size of digest is zero
+	 * So since QCE gets stuck on zero-sized texts, we return
+	 * pre-calculated hash 
+	 */
+	{
+		pr_err("Bufflen: zero\n");
+		if (digestsize == SHA1_DIGEST_SIZE)
+	{
+		pr_err("SHA1\n");
+			memcpy(rctx->digest, "\xda\x39\xa3\xee\x5e\x6b\x4b\x0d\x32\x55\xbf\xef\x95\x60\x18\x90\xaf\xd8\x07\x09", SHA1_DIGEST_SIZE);
+	}
+ 		else if (digestsize == SHA256_DIGEST_SIZE)
+ 		{
+			pr_err("SHA2\n");
+			memcpy(rctx->digest, "\xe3\xb0\xc4\x42\x98\xfc\x1c\x14\x9a\xfb\xf4\xc8\x99\x6f\xb9\x24\x27\xae\x41\xe4\x64\x9b\x93\x4c\xa4\x95\x99\x1b\x78\x52\xb8\x55", SHA256_DIGEST_SIZE);}
+		else
+		{
+			qce->async_req_done(tmpl->qce, -EINVAL);
+			return -EINVAL;
+		}
+		if (req->result)
+		memcpy(req->result, rctx->digest, digestsize);
+		qce->async_req_done(tmpl->qce, 0);
+		return 0;
+	}
+	
 	rctx->src_nents = sg_nents_for_len(req->src, req->nbytes);
 	if (rctx->src_nents < 0) {
 		dev_err(qce->dev, "Invalid numbers of src SG.\n");
@@ -345,11 +373,10 @@ static int qce_ahash_final(struct ahash_request *req)
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(req->base.tfm);
 	struct qce_device *qce = tmpl->qce;
+	
+	
 	int ret;
 	
- 	if (!rctx->buflen)
- 		return 0;
-
 	/* If hash is already been finalized, don't do anything */
 	if (rctx->finalized)
 	{
