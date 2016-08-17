@@ -397,10 +397,7 @@ static int qce_ahash_final(struct ahash_request *req)
 
 	ret = qce->async_req_enqueue(tmpl->qce, &req->base);
 	
-// 	if (ret == -EINPROGRESS)
-// 		return 0;
-// 	else
-		return ret;
+	return ret;
 }
 
 static int qce_ahash_digest(struct ahash_request *req)
