@@ -130,7 +130,7 @@ static void qce_tasklet_req_done(unsigned long data)
 	qce->req = NULL;
 	spin_unlock_irqrestore(&qce->lock, flags);
 
-	if (req)
+	if (req && (void *)req->complete)
 		req->complete(req, qce->result);
 
 	qce_handle_queue(qce, NULL);
