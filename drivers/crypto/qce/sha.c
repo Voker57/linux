@@ -80,6 +80,7 @@ static int qce_ahash_async_req_handle(struct crypto_async_request *async_req)
 	struct qce_sha_ctx *ctx = crypto_tfm_ctx(async_req->tfm);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(async_req->tfm);
 	struct qce_device *qce = tmpl->qce;
+	unsigned int digestsize = crypto_ahash_digestsize(crypto_ahash_reqtfm(req));
 	unsigned long flags = rctx->flags;
 	int ret;
 
@@ -89,6 +90,29 @@ static int qce_ahash_async_req_handle(struct crypto_async_request *async_req)
 	} else if (IS_CMAC(flags)) {
 		rctx->authkey = ctx->authkey;
 		rctx->authklen = AES_KEYSIZE_128;
+	}
+
+	if (!req->nbytes) {
+		/* Only way that can happen is if total size of digest is zero
+		 * So since QCE gets stuck on zero-sized texts, we return
+		 * pre-calculated hash
+		 */
+		if (digestsize == SHA1_DIGEST_SIZE) {
+			memcpy(rctx->digest,
+			       sha1_zero_message_hash,
+			       SHA1_DIGEST_SIZE);
+		} else if (digestsize == SHA256_DIGEST_SIZE) {
+			memcpy(rctx->digest,
+			       sha256_zero_message_hash,
+			       SHA256_DIGEST_SIZE);
+		} else {
+			qce->async_req_done(tmpl->qce, -EINVAL);
+			return -EINVAL;
+		}
+		if (req->result)
+		memcpy(req->result, rctx->digest, digestsize);
+		qce->async_req_done(tmpl->qce, 0);
+		return 0;
 	}
 
 	rctx->src_nents = sg_nents_for_len(req->src, req->nbytes);
@@ -321,9 +345,6 @@ static int qce_ahash_final(struct ahash_request *req)
 	struct qce_sha_reqctx *rctx = ahash_request_ctx(req);
 	struct qce_alg_template *tmpl = to_ahash_tmpl(req->base.tfm);
 	struct qce_device *qce = tmpl->qce;
-
-	if (!rctx->buflen)
-		return 0;
 
 	/* If hash is already been finalized, don't do anything */
 	if (rctx->finalized)
